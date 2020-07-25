@@ -51,24 +51,23 @@ if(!class_exists('wellspring_forms')) {
             $username = $config["username"];
             $password =  $config["password"];
             $basicAuth = "Basic ".base64_encode($username.":".$password);
-            $headers = array('Authorization' => $basicAuth);
-            $lg_api_response = wp_remote_get( $config["api_base_url"] . "/api.php?srv=form_list", array('headers' => $headers));
+            $headers = array('Authorization' => $basicAuth, '');
 
+            $forms_api_response = wp_remote_get( $config["api_base_url"] . "/api.php?srv=form_list&include_archived=false", array('headers' => $headers));
+            $rate_limit = wp_remote_retrieve_header($forms_api_response, 'x-ratelimit-limit');
+            $rate_limit_remaining = wp_remote_retrieve_header($forms_api_response, 'x-ratelimit-remaining');
+            $rate_limit_reset = wp_remote_retrieve_header($forms_api_response, 'x-ratelimit-reset');
+            echo("Rate limit is " . $rate_limit . " calls per minute. " . $rate_limit_remaining . " calls remain until " . $rate_limit_reset . ".");
+            $forms_body = wp_remote_retrieve_body($forms_api_response);
 
-            //TESTING UNTIL I CAN GET MY CREDENTIALS
-            $path = plugin_dir_path(__file__)."/test_resp.xml";
-            $xmlfile = file_get_contents($path);
-            $new = simplexml_load_string($xmlfile);
+            $new = simplexml_load_string($forms_body);
             $con = json_encode($new);
             $newArr = json_decode($con, true);
 
-            //echo(print_r($newArr));
             return($newArr);
 
             // ADD ERROR HANDLING AND RETURN EMPTY ARRAY IF SO
 
-
-            //echo(print_r($lg_api_response['body']));
         }
 
         public function display(){
@@ -89,7 +88,7 @@ if(!class_exists('wellspring_forms')) {
             $atts = array_change_key_case((array)$atts, CASE_LOWER);
 
             $forms_array = $this->retrieve_forms()["response"]["items"]["form"];
-            print_r($forms_array);
+            //print_r($forms_array);
 
             // override default attributes with user attributes
             $wf_atts = shortcode_atts([
@@ -105,8 +104,11 @@ if(!class_exists('wellspring_forms')) {
             // title
             $o .= '<h2>' . $wf_atts['title'] . '</h2>';
 
+            $incr = 0;
             foreach($forms_array as $form_item){
-                $o .= '<a href="'.$form_item["url"].'">' . $form_item["title"] . '</a></br>';
+               if($form_item["status"] == "Available" && $form_item["public"] == "true") {
+                    $o .= '<a href="' . $form_item["url"] . '">' . $form_item["title"] . '</a></br>';
+               }
             }
 
             // end box
@@ -120,7 +122,6 @@ if(!class_exists('wellspring_forms')) {
     return "Plugin name collision.  Uh oh.";
 }
 
-echo("\n"."Existence: " . shortcode_exists("wellspring_forms") ."\n");
 $wellspring_forms = wellspring_forms::getInstance();
 
 // Probably need to put things here
