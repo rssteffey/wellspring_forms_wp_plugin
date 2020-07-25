@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ccb_api>
+    <request>
+        <parameters>
+            <argument value="form_list" name="srv"/>
+            <argument value="1" name="form_id"/>
+        </parameters>
+    </request>
+    <response>
+        <service>form_list</service>
+        <service_action>execute</service_action>
+        <availability>public</availability>
+        <items count="3">
+            <form id="1">
+                <title>Erin's Form</title>
+                <description></description>
+                <campus id="1">User's Experience Campus</campus>
+                <managers>
+                    <manager id="1">Larry Boy</manager>
+                    <manager id="2424">Basic User</manager>
+                    <manager id="2421">Limited Financial</manager>
+                </managers>
+                <start>2013-08-15</start>
+                <end></end>
+                <public>false</public>
+                <published>true</published>
+                <status>Available</status>
+                <creator id="1">Larry Boy</creator>
+                <modifier id="1">Larry Boy</modifier>
+                <created>2013-02-14 14:10:25</created>
+                <modified>2013-08-15 16:28:02</modified>
+                <url>https://wellspringchristian.ccbchurch.com/form_response.php?id=206</url>
+            </form>
+            <form id="2">
+                <title>Shawn's Form</title>
+                <description></description>
+                <campus id="1">User's Experience Campus</campus>
+                <managers>
+                    <manager id="1">Larry Boy</manager>
+                    <manager id="2424">Basic User</manager>
+                </managers>
+                <start>2013-08-15</start>
+                <end></end>
+                <public>false</public>
+                <published>true</published>
+                <status>Available</status>
+                <creator id="1">Larry Boy</creator>
+                <modifier id="1">Larry Boy</modifier>
+                <created>2013-02-14 14:10:25</created>
+                <modified>2013-08-15 16:28:02</modified>
+                <url>https://wellspringchristian.ccbchurch.com/form_response.php?id=3</url>
+            </form>
+        </items>
+    </response>
+</ccb_api>
