@@ -16,6 +16,8 @@ You should see these under Settings > Community Church Builder API Options
 
 Username and password need to be for a CCB user with API access, base url is "https://wellspringchristian.ccbchurch.com" at time of writing this README
 
+Cache length is the number of minutes the cached response from CCB should be stored.  Keeping this higher will mean fewer calls to their API (and much faster page load times for site visitors)
+
 The shortcode for adding the widget to a page is [wellspring_forms]
 You can change the widget's title (default "Forms") with a shortcode attribute (Example: [wellspring_forms title="Signups!"]
 

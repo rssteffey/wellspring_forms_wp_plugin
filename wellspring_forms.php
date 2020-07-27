@@ -29,7 +29,7 @@ if ( is_admin() ) {
 if(!class_exists('wellspring_forms')) {
     class wellspring_forms
     {
-        // Singleton, because I have no idea what all WP calls during a lifecycle
+        // Singleton, because I have no idea what cruft WP does during a lifecycle
         static $instance = false;
 
         public static function getInstance() {
@@ -43,27 +43,43 @@ if(!class_exists('wellspring_forms')) {
             $this->display();
         }
 
+        // Main function to interact with the CCB API
         public function retrieve_forms()
         {
             try {
                 $base_url = get_option('ccb_api_base_url');
                 $username = get_option('ccb_api_username');
                 $password = get_option('ccb_api_password');
+                // We stored the timeout in minutes, and we need seconds
+                $cache_expiration = get_option('ccb_api_cache_length') * 60;
                 $basicAuth = "Basic " . base64_encode($username . ":" . $password);
                 $headers = array('Authorization' => $basicAuth, '');
 
-                $forms_api_response = wp_remote_get($base_url . "/api.php?srv=form_list&include_archived=false", array('headers' => $headers));
-                $rate_limit = wp_remote_retrieve_header($forms_api_response, 'x-ratelimit-limit');
-                $rate_limit_remaining = wp_remote_retrieve_header($forms_api_response, 'x-ratelimit-remaining');
-                $rate_limit_reset = wp_remote_retrieve_header($forms_api_response, 'x-ratelimit-reset');
-                //    echo("Rate limit is " . $rate_limit . " calls per minute. " . $rate_limit_remaining . " calls remain until " . $rate_limit_reset . ".");
-                $forms_body = wp_remote_retrieve_body($forms_api_response);
+                // Try the cache first
+                $cached_data = get_transient('ccb_api_forms');
 
-                $new = simplexml_load_string($forms_body);
-                $con = json_encode($new);
-                $newArr = json_decode($con, true);
-                return($newArr["response"]["items"]["form"]);
+                // If cache is stale, let's make the API call
+                if($cached_data === false) {
+                    $forms_api_response = wp_remote_get($base_url . "/api.php?srv=form_list&include_archived=false", array('headers' => $headers));
+                    $forms_body = wp_remote_retrieve_body($forms_api_response);
+                    $new = simplexml_load_string($forms_body);
+                    $con = json_encode($new);
+
+                    //Quick and dirty check so we don't cache error responses. If this fails, we throw an Exception and skip cache set
+                    $dummyParseTest = json_decode($con, true)["response"]["items"]["form"];
+
+                    //Update cache
+                    set_transient('ccb_api_forms', $con, $cache_expiration);
+                } else {
+                    $con = $cached_data;
+                }
+
+                $newArr = json_decode($con, true)["response"]["items"]["form"];
+
+                return($newArr);
             } catch(Exception $e) {
+                // I realize my error handling setup is very ... not well thought-out.
+                // But I'm out of weekend.  This should all cover most cases, albeit awkwardly and with assumptions about empty arrays
                 return([]);
             }
 
@@ -130,7 +146,7 @@ if(!class_exists('wellspring_forms')) {
 
 $wellspring_forms = wellspring_forms::getInstance();
 
-// Probably need to put things here? Nothing has come up yet though...
+// Probably need to put things here? Nothing pertinent has come up yet though...
 function wellspring_forms_activate_plugin(){
 
 }
@@ -141,6 +157,7 @@ function wellspring_forms_deactivate_plugin(){
         delete_option('ccb_api_username');
         delete_option('ccb_api_password');
         delete_option('ccb_api_base_url');
-        //delete_option('ccb_api_cache_length');
+        delete_option('ccb_api_cache_length');
+        delete_transient('ccb_api_forms');
     }
 }

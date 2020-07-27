@@ -13,12 +13,12 @@ function ccb_api_settings_init(){
     add_settings_field('ccb_api_username', 'API Username', 'api_settings_field_cb', 'ccb_api', 'ccb_api_section', ['label_for' => 'ccb_api_username'] );
     add_settings_field('ccb_api_password', 'API Password', 'api_settings_field_cb', 'ccb_api', 'ccb_api_section', ['label_for' => 'ccb_api_password'] );
     add_settings_field('ccb_api_base_url', 'API Base URL', 'api_settings_field_cb', 'ccb_api', 'ccb_api_section', ['label_for' => 'ccb_api_base_url'] );
-    //add_settings_field('ccb_api_cache_length', 'Cache Refresh Frequency', 'cache_time_field_cb', 'ccb_api', 'ccb_api_section', ['label_for' => 'ccb_api_cache_length'] );
+    add_settings_field('ccb_api_cache_length', 'Cache Refresh Frequency', 'cache_time_field_cb', 'ccb_api', 'ccb_api_section', ['label_for' => 'ccb_api_cache_length'] );
 
     register_setting('ccb_api', 'ccb_api_username');
     register_setting('ccb_api', 'ccb_api_password');
     register_setting('ccb_api', 'ccb_api_base_url');
-    //register_setting('ccb_api', 'ccb_api_cache_length');
+    register_setting('ccb_api', 'ccb_api_cache_length');
 }
 
 add_action( 'admin_init', 'ccb_api_settings_init' );
@@ -67,6 +67,7 @@ function ccb_options_page_html() {
     if ( isset( $_GET['settings-updated'] ) ) {
         // add settings saved message with the class of "updated"
         add_settings_error( 'ccb_api_messages', 'ccb_api_message', __( 'Settings Saved', 'ccb_api' ), 'updated' );
+        delete_transient('ccb_api_forms');
     }
 
     // show error/update messages
