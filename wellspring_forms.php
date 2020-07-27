@@ -108,7 +108,6 @@ if(!class_exists('wellspring_forms')) {
 
             // start div
             $o .= '<div class="ccb-forms-widget-box">';
-            $o .= '<h2>' . $wf_atts['title'] . '</h2>';
 
             if(is_array($forms_array) || is_object($forms_array)) {
                 // Empty array *probably* means we hit our error case above. But we know what they say when we assume...
