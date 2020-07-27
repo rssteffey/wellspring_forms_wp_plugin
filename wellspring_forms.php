@@ -24,8 +24,6 @@ if ( is_admin() ) {
     require_once __DIR__ . '/admin/wellspring_forms_admin.php';
 }
 
-
-
 if(!class_exists('wellspring_forms')) {
     class wellspring_forms
     {
@@ -40,7 +38,6 @@ if(!class_exists('wellspring_forms')) {
 
         private function __construct() {
             add_action('init', array($this, 'wellspring_forms_plugin_shortcode_init'));
-            $this->display();
         }
 
         // Main function to interact with the CCB API
@@ -84,14 +81,10 @@ if(!class_exists('wellspring_forms')) {
             }
 
             return([]);
-
         }
 
-        public function display(){
-            //wp_enqueue_style('wellspring_forms.css', plugin_dir_url(__FILE__) . '/wellspring_forms.css');
-        }
 
-        // Widget
+        // ---Widget---
 
         //Corresponding shortcode setup
         public function wellspring_forms_plugin_shortcode_init()
@@ -114,24 +107,24 @@ if(!class_exists('wellspring_forms')) {
             $o = '';
 
             // start div
-            $o .= '<div class="wellspring_forms-widget-box">';
+            $o .= '<div class="ccb-forms-widget-box">';
             $o .= '<h2>' . $wf_atts['title'] . '</h2>';
 
             if(is_array($forms_array) || is_object($forms_array)) {
                 // Empty array *probably* means we hit our error case above. But we know what they say when we assume...
                 if(count($forms_array) == 0){
-                    $o .= "Error fetching forms";
+                    $o .= '<p class="ccb-error"> Error fetching forms. </p>';
                 }
 
                 // If we have stuff, print out each link
                 foreach ($forms_array as $form_item) {
                     if ($form_item["status"] == "Available" && $form_item["public"] == "true") {
-                        $o .= '<a class="forms-list-link" href="' . $form_item["url"] . '">' . $form_item["title"] . '</a></br>';
+                        $o .= '<a class="ccb-forms-list-link" href="' . $form_item["url"] . '">' . $form_item["title"] . '</a></br>';
                     }
                 }
             } else{
                 // Not positive this is hittable, but without my usual QA team, I'm not risking it
-                $o .= "Error parsing forms response.";
+                $o .= '<p class="ccb-error"> Error parsing forms response. </p>';
             }
 
             $o .= '</div>';
@@ -146,7 +139,7 @@ if(!class_exists('wellspring_forms')) {
 
 $wellspring_forms = wellspring_forms::getInstance();
 
-// Probably need to put things here? Nothing pertinent has come up yet though...
+// Probably need to put things here? Nothing pertinent has come up yet though
 function wellspring_forms_activate_plugin(){
 
 }
