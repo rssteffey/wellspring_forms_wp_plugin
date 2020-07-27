@@ -125,6 +125,7 @@ if(!class_exists('wellspring_forms')) {
             } else{
                 // Not positive this is hittable, but without my usual QA team, I'm not risking it
                 $o .= '<p class="ccb-error"> Error parsing forms response. </p>';
+                delete_transient('ccb_api_forms');
             }
 
             $o .= '</div>';
