@@ -1,6 +1,6 @@
 # wellspring_forms
 
-Wellspring Forms is a Wordpress plugin specifically for grabbing a list of forms from the CommunityChurchBuilders API.
+Wellspring Forms is a Wordpress plugin specifically for grabbing a list of forms from the Community Church Builders API.
 
 This has been written expressly for Wellspring Christian Church, but if you for some reason need exactly this functionality (a list of CCB forms filtered by "Available" and "Public") then technically the settings are flexible enough for you to join in the party!
 
