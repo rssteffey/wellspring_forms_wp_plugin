@@ -12,16 +12,16 @@
 
 defined( 'ABSPATH' ) or die( 'Direct access is forbidden' );
 
-//register_activation_hook( __FILE__, 'wellspring_forms_activate_plugin' );
+register_activation_hook( __FILE__, 'wellspring_forms_activate_plugin' );
 
-//register_deactivation_hook( __FILE__, 'wellspring_forms_deactivate_plugin' );
+register_deactivation_hook( __FILE__, 'wellspring_forms_deactivate_plugin' );
 
 add_filter('widget_text', 'do_shortcode');
 
 
 // Admin check (in case that wasn't obvious)
 if ( is_admin() ) {
-    require_once __DIR__ . '/admin/lifegroups-admin.php';
+    require_once __DIR__ . '/admin/wellspring_forms_admin.php';
 }
 
 
@@ -40,39 +40,39 @@ if(!class_exists('wellspring_forms')) {
 
         private function __construct() {
             add_action('init', array($this, 'wellspring_forms_plugin_shortcode_init'));
+            $this->display();
         }
 
         public function retrieve_forms()
         {
-            $conf_path = plugin_dir_path(__file__)."/config.json";
-            $jsonString = file_get_contents($conf_path);
-            $config = json_decode($jsonString, true);
+            try {
+                $base_url = get_option('ccb_api_base_url');
+                $username = get_option('ccb_api_username');
+                $password = get_option('ccb_api_password');
+                $basicAuth = "Basic " . base64_encode($username . ":" . $password);
+                $headers = array('Authorization' => $basicAuth, '');
 
-            $username = $config["username"];
-            $password =  $config["password"];
-            $basicAuth = "Basic ".base64_encode($username.":".$password);
-            $headers = array('Authorization' => $basicAuth, '');
+                $forms_api_response = wp_remote_get($base_url . "/api.php?srv=form_list&include_archived=false", array('headers' => $headers));
+                $rate_limit = wp_remote_retrieve_header($forms_api_response, 'x-ratelimit-limit');
+                $rate_limit_remaining = wp_remote_retrieve_header($forms_api_response, 'x-ratelimit-remaining');
+                $rate_limit_reset = wp_remote_retrieve_header($forms_api_response, 'x-ratelimit-reset');
+                //    echo("Rate limit is " . $rate_limit . " calls per minute. " . $rate_limit_remaining . " calls remain until " . $rate_limit_reset . ".");
+                $forms_body = wp_remote_retrieve_body($forms_api_response);
 
-            $forms_api_response = wp_remote_get( $config["api_base_url"] . "/api.php?srv=form_list&include_archived=false", array('headers' => $headers));
-            $rate_limit = wp_remote_retrieve_header($forms_api_response, 'x-ratelimit-limit');
-            $rate_limit_remaining = wp_remote_retrieve_header($forms_api_response, 'x-ratelimit-remaining');
-            $rate_limit_reset = wp_remote_retrieve_header($forms_api_response, 'x-ratelimit-reset');
-            echo("Rate limit is " . $rate_limit . " calls per minute. " . $rate_limit_remaining . " calls remain until " . $rate_limit_reset . ".");
-            $forms_body = wp_remote_retrieve_body($forms_api_response);
+                $new = simplexml_load_string($forms_body);
+                $con = json_encode($new);
+                $newArr = json_decode($con, true);
+                return($newArr["response"]["items"]["form"]);
+            } catch(Exception $e) {
+                return([]);
+            }
 
-            $new = simplexml_load_string($forms_body);
-            $con = json_encode($new);
-            $newArr = json_decode($con, true);
-
-            return($newArr);
-
-            // ADD ERROR HANDLING AND RETURN EMPTY ARRAY IF SO
+            return([]);
 
         }
 
         public function display(){
-            $style_path = plugins_url( 'wellspring_forms.css', _FILE_ );
-            wp_enqueue_style($style_path);
+            //wp_enqueue_style('wellspring_forms.css', plugin_dir_url(__FILE__) . '/wellspring_forms.css');
         }
 
         // Widget
@@ -87,8 +87,7 @@ if(!class_exists('wellspring_forms')) {
             // normalize attribute keys, lowercase
             $atts = array_change_key_case((array)$atts, CASE_LOWER);
 
-            $forms_array = $this->retrieve_forms()["response"]["items"]["form"];
-            //print_r($forms_array);
+            $forms_array = $this->retrieve_forms();
 
             // override default attributes with user attributes
             $wf_atts = shortcode_atts([
@@ -98,23 +97,30 @@ if(!class_exists('wellspring_forms')) {
             // start output
             $o = '';
 
-            // start box
+            // start div
             $o .= '<div class="wellspring_forms-widget-box">';
-
-            // title
             $o .= '<h2>' . $wf_atts['title'] . '</h2>';
 
-            $incr = 0;
-            foreach($forms_array as $form_item){
-               if($form_item["status"] == "Available" && $form_item["public"] == "true") {
-                    $o .= '<a href="' . $form_item["url"] . '">' . $form_item["title"] . '</a></br>';
-               }
+            if(is_array($forms_array) || is_object($forms_array)) {
+                // Empty array *probably* means we hit our error case above. But we know what they say when we assume...
+                if(count($forms_array) == 0){
+                    $o .= "Error fetching forms";
+                }
+
+                // If we have stuff, print out each link
+                foreach ($forms_array as $form_item) {
+                    if ($form_item["status"] == "Available" && $form_item["public"] == "true") {
+                        $o .= '<a class="forms-list-link" href="' . $form_item["url"] . '">' . $form_item["title"] . '</a></br>';
+                    }
+                }
+            } else{
+                // Not positive this is hittable, but without my usual QA team, I'm not risking it
+                $o .= "Error parsing forms response.";
             }
 
-            // end box
             $o .= '</div>';
 
-            // return output
+            // return that div
             return $o;
         }
     }
@@ -124,11 +130,17 @@ if(!class_exists('wellspring_forms')) {
 
 $wellspring_forms = wellspring_forms::getInstance();
 
-// Probably need to put things here
+// Probably need to put things here? Nothing has come up yet though...
 function wellspring_forms_activate_plugin(){
 
 }
 
+// Unregister those DB settings
 function wellspring_forms_deactivate_plugin(){
-
+    if(is_admin()){
+        delete_option('ccb_api_username');
+        delete_option('ccb_api_password');
+        delete_option('ccb_api_base_url');
+        //delete_option('ccb_api_cache_length');
+    }
 }
