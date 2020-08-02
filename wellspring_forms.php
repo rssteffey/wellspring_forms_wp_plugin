@@ -57,17 +57,22 @@ if(!class_exists('wellspring_forms')) {
 
                 // If cache is stale, let's make the API call
                 if($cached_data === false) {
-                    $forms_api_response = wp_remote_get($base_url . "/api.php?srv=form_list&include_archived=false", array('headers' => $headers));
+                    $forms_api_response = wp_remote_get($base_url . "/api.php?srv=form_list&include_archived=false", array('headers' => $headers, 'timeout' => 40));
                     $forms_body = wp_remote_retrieve_body($forms_api_response);
                     $new = simplexml_load_string($forms_body);
                     $con = json_encode($new);
 
                     //Quick and dirty check so we don't cache error responses. If this fails, we throw an Exception and skip cache set
                     $dummyParseTest = json_decode($con, true)["response"]["items"]["form"];
+                    if(gettype($dummyParseTest) == "NULL"){
+                        throw new Exception('Error parsing response (possible request timeout)');
+                    }
 
                     //Update cache
                     set_transient('ccb_api_forms', $con, $cache_expiration);
+                    set_transient('ccb_api_forms_backup', $con, 60 * 60 * 24 * 7); //backup cache lasts a week
                 } else {
+                    // Hit cache instead of re-requesting
                     $con = $cached_data;
                 }
 
@@ -77,6 +82,13 @@ if(!class_exists('wellspring_forms')) {
             } catch(Exception $e) {
                 // I realize my error handling setup is very ... not well thought-out.
                 // But I'm out of weekend.  This should all cover most cases, albeit awkwardly and with assumptions about empty arrays
+                // The fallback cache should be updated on the very next success to CCB
+                $long_backup = get_transient('ccb_api_forms_backup');
+                if($long_backup && json_decode($long_backup, true)["response"]["items"]["form"]){
+                    $fallback = json_decode($con, true)["response"]["items"]["form"];
+                    return($fallback);
+                }
+
                 return([]);
             }
 
@@ -109,12 +121,12 @@ if(!class_exists('wellspring_forms')) {
             // start div
             $o .= '<div class="ccb-forms-widget-box">';
 
-            if(is_array($forms_array) || is_object($forms_array)) {
-                // Empty array *probably* means we hit our error case above. But we know what they say when we assume...
-                if(count($forms_array) == 0){
-                    $o .= '<p class="ccb-error"> Error fetching forms. </p>';
-                }
+            // Fall to backup cache if necessary
+            if(!is_array($forms_array) && !is_object($forms_array)){
+                $forms_array = get_transient('ccb_api_forms_backup')["response"]["items"]["form"];
+            }
 
+            if(is_array($forms_array) || is_object($forms_array)) {
                 // If we have stuff, print out each link
                 foreach ($forms_array as $form_item) {
                     if ($form_item["status"] == "Available" && $form_item["public"] == "true") {
@@ -122,7 +134,7 @@ if(!class_exists('wellspring_forms')) {
                     }
                 }
             } else{
-                // Not positive this is hittable, but without my usual QA team, I'm not risking it
+                // Main error output
                 $o .= '<p class="ccb-error"> Error parsing forms response. </p>';
                 delete_transient('ccb_api_forms');
             }
