@@ -129,8 +129,13 @@ if(!class_exists('wellspring_forms')) {
             if(is_array($forms_array) || is_object($forms_array)) {
                 // If we have stuff, print out each link
                 foreach ($forms_array as $form_item) {
-                    if ($form_item["status"] == "Available" && $form_item["public"] == "true") {
-                        $o .= '<a class="ccb-forms-list-link" href="' . $form_item["url"] . '">' . $form_item["title"] . '</a></br>';
+                    $start_string = $form_item["start"];
+                    if(is_string($start_string)){
+                        $start_date = new DateTime($form_item["start"]);
+                        $now = new DateTime();
+                        if ($form_item["status"] == "Available" && $form_item["public"] == "true"  && ($start_date <= $now)) {
+                            $o .= '<a class="ccb-forms-list-link" href="' . $form_item["url"] . '">' . $form_item["title"] . '</a></br>';
+                        }
                     }
                 }
             } else{
